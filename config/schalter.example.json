@@ -1,0 +1,10 @@
+{
+  "aktiv": true,
+  "versand": "stumm",
+  "pause_bis": null,
+  "sitzung": "knopf",
+  "gebiete_aus": [],
+  "geaendert": "",
+  "von": "",
+  "_hinweis": "Von der App geschrieben (POST /api/schalter). Rangfolge: aktiv=false > pause_bis (einschließlich) > versand (gruppe | nur_ich | stumm). sitzung: knopf | auto."
+}

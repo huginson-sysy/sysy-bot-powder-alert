@@ -1,0 +1,68 @@
+{
+  "_hinweis": "v0.3 (03.10.2026): Alarm-Kennzahl = Tiefschnee-Chance = Anteil der Ensemble-Läufe mit ≥ tiefschnee_ab_cm Neuschnee in den 48 h bis Skistart (skistart_uhr), trocken geblieben (kein Regen/keine Erwärmung ≥ tmax_nass_c nach dem Schneefall) und fahrbar (kein Sturm ≥ wind_aus_kmh, kein Regen am Skitag, kein Föhn). Familien ICON-EPS (40) und ECMWF (51) zählen je 50 %. Der Punkte-Score (≥ alarm_ab_punkte) bleibt als Zweitwert „Top-Tag“ (Pulver + kalt + Sonne + wenig Wind). DANY 03.10.: Alarm ab 70 % (zum Start), Tiefschnee ab 20 cm. Absage unter 50 % (20 Punkte Abstand wie in v0.2). v0.2-Fassung: config/regeln.v0.2.json.bak.",
+  "saison_start": "2026-10-15",
+  "saison_ende": "2027-04-30",
+  "vorlauf_tage": 2,
+  "lauf_uhrzeit": "17:00",
+  "start": {
+    "label": "Füssen",
+    "adresse": "Faigeleweg 1, 87629 Füssen",
+    "lat": 47.56936,
+    "lng": 10.70406,
+    "quelle": "Nominatim 16.09.2026; label bewusst ohne Straße — steht im Gruppen-Alarm"
+  },
+  "neuschnee_top_cm": 30,
+  "neuschnee_min_cm": 15,
+  "tmax_trocken_c": 0,
+  "tmax_nass_c": 2,
+  "wind_ok_kmh": 30,
+  "wind_grenz_kmh": 45,
+  "wind_aus_kmh": 60,
+  "alarm_ab_punkte": 70,
+  "gut_ab_punkte": 50,
+  "fahrzeit_malus_pro_30min": 4,
+  "whatsapp": {
+    "dany_jid": "<eigene JID, z. B. 4915…@s.whatsapp.net>",
+    "bridge": "http://127.0.0.1:8080/api/send",
+    "gruppe_jid": "<Gruppen-JID, z. B. 1203…@g.us>"
+  },
+  "sturmbrecher": {
+    "cli": "~/SYSY/scripts/sturmbrecher",
+    "projekt": "POWDER-BOT",
+    "_hinweis": "automatisch nur bei config/schalter.json → sitzung = auto; Vorgabe ist der App-Knopf „Tour planen“ (DANY 03.10.)"
+  },
+  "auto_verschieben": false,
+  "modelle_det": [
+    "icon_seamless",
+    "ecmwf_ifs025",
+    "gfs_seamless",
+    "meteofrance_seamless",
+    "ukmo_seamless"
+  ],
+  "modelle_ens": [
+    "icon_seamless",
+    "ecmwf_ifs025"
+  ],
+  "alarm_ab_wahrscheinlichkeit": 0.7,
+  "absage_unter_wahrscheinlichkeit": 0.5,
+  "update_ab_diff_wahrscheinlichkeit": 0.2,
+  "regen_grenze_mm": 1.0,
+  "foehn_sektor_grad": [
+    150,
+    230
+  ],
+  "foehn_wind_ab_kmh": 25,
+  "stau_wind_ab_kmh": 15,
+  "tiefschnee_ab_cm": 20,
+  "skistart_uhr": 8,
+  "skitag_bis_uhr": 16,
+  "gebietswechsel_ab_diff": 0.15,
+  "min_laeufe_je_familie": 10,
+  "min_gebiete_anteil_fuer_alarm": 0.75,
+  "lawinenberichte": {
+    "bayern": "https://lawinenwarndienst.bayern.de/",
+    "tirol": "https://lawinen.report/",
+    "vorarlberg": "https://www.lawinen.at/"
+  },
+  "bridge_db": "~/SYSY/PROJEKTE/SYSY-WHATSAPP/whatsapp-bridge/store/messages.db"
+}

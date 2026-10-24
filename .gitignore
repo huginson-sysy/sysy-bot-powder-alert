@@ -1,0 +1,18 @@
+# Laufzeit + Privates (bleiben lokal)
+.env
+.mcp.json
+.sysy-project.json
+.claude/
+CLAUDE.md
+PROJECT.md
+data/
+fotos/
+__pycache__/
+*.pyc
+*.bak
+.DS_Store
+# eigene Betriebskonfiguration (Kennungen) — Vorlagen liegen als *.example.json daneben
+config/regeln.json
+config/wa_gruppe.json
+config/schalter.json
+docs/app-konzept-*.md

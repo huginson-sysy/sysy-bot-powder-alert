@@ -1,0 +1,415 @@
+{
+ "_hinweis": "Koordinaten = Talstation/Ort (Nominatim-geprüft 16.09.2026, data/geocheck.json). Höhen in m. Fahrzeit/km ab Faigeleweg 1, Füssen per OSRM (router.project-osrm.org, 16.09.2026, Sommerstraßen — Pässe/Winter nicht berücksichtigt). Gletscher ab 24.10.2026 (DANY: „nimm Sölden und die Gletscher in der Nähe mit rein“): Koordinaten Nominatim 24.10., Fahrzeit/km OSRM 24.10. (geprüft mit Zwangspunkt Fernpass — keine Route übers im Winter gesperrte Hahntennjoch; Fernpass-Stau an Winterwochenenden nicht eingerechnet). Hintertux (OSRM 170 min) bewusst nicht aufgenommen. Höhen tal/berg der Gletscher aus Liftdaten gerundet; berg = Bewertungshöhe der Prognose. powder = alte v0.1-Note, von v0.3 nicht genutzt, für neue Gebiete nicht vergeben.",
+ "gebiete": [
+  {
+   "id": "warth",
+   "name": "Warth-Schröcken",
+   "ort": "Warth, Vorarlberg",
+   "lat": 47.2578,
+   "lng": 10.1806,
+   "tal": 1500,
+   "berg": 2050,
+   "fahrzeit_min": 75,
+   "region": "vorarlberg",
+   "powder": 5,
+   "stau": [
+    "NW",
+    "W"
+   ],
+   "hang": "NO",
+   "foehn": true,
+   "km": 77,
+   "lwd": "vorarlberg"
+  },
+  {
+   "id": "damuels",
+   "name": "Damüls-Mellau",
+   "ort": "Damüls, Vorarlberg",
+   "lat": 47.2803,
+   "lng": 9.8925,
+   "tal": 1430,
+   "berg": 2050,
+   "fahrzeit_min": 110,
+   "region": "vorarlberg",
+   "powder": 5,
+   "stau": [
+    "NW",
+    "W"
+   ],
+   "hang": "N",
+   "foehn": true,
+   "km": 110,
+   "lwd": "vorarlberg"
+  },
+  {
+   "id": "lech",
+   "name": "Lech Zürs (Arlberg)",
+   "ort": "Lech, Vorarlberg",
+   "lat": 47.208,
+   "lng": 10.142,
+   "tal": 1450,
+   "berg": 2450,
+   "fahrzeit_min": 85,
+   "region": "vorarlberg",
+   "powder": 5,
+   "stau": [
+    "NW",
+    "W"
+   ],
+   "hang": "N",
+   "foehn": true,
+   "km": 84,
+   "lwd": "vorarlberg"
+  },
+  {
+   "id": "stanton",
+   "name": "St. Anton (Arlberg)",
+   "ort": "St. Anton am Arlberg, Tirol",
+   "lat": 47.13,
+   "lng": 10.265,
+   "tal": 1300,
+   "berg": 2800,
+   "fahrzeit_min": 100,
+   "region": "tirol",
+   "powder": 5,
+   "stau": [
+    "NW",
+    "W"
+   ],
+   "hang": "N",
+   "foehn": true,
+   "km": 108,
+   "lwd": "tirol"
+  },
+  {
+   "id": "diedamskopf",
+   "name": "Diedamskopf",
+   "ort": "Schoppernau, Vorarlberg",
+   "lat": 47.315,
+   "lng": 10.035,
+   "tal": 820,
+   "berg": 2060,
+   "fahrzeit_min": 95,
+   "region": "vorarlberg",
+   "powder": 4,
+   "stau": [
+    "NW",
+    "N"
+   ],
+   "hang": "N",
+   "foehn": true,
+   "km": 97,
+   "lwd": "vorarlberg"
+  },
+  {
+   "id": "balderschwang",
+   "name": "Balderschwang",
+   "ort": "Balderschwang, Allgäu",
+   "lat": 47.464,
+   "lng": 10.0987,
+   "tal": 1040,
+   "berg": 1600,
+   "fahrzeit_min": 65,
+   "region": "bayern",
+   "powder": 4,
+   "stau": [
+    "NW",
+    "N"
+   ],
+   "hang": "N",
+   "foehn": true,
+   "km": 84,
+   "lwd": "bayern"
+  },
+  {
+   "id": "nebelhorn",
+   "name": "Nebelhorn (Oberstdorf)",
+   "ort": "Oberstdorf, Allgäu",
+   "lat": 47.41,
+   "lng": 10.279,
+   "tal": 830,
+   "berg": 2200,
+   "fahrzeit_min": 55,
+   "region": "bayern",
+   "powder": 4,
+   "stau": [
+    "NW",
+    "N"
+   ],
+   "hang": "N",
+   "foehn": true,
+   "km": 73,
+   "lwd": "bayern"
+  },
+  {
+   "id": "fellhorn",
+   "name": "Fellhorn-Kanzelwand",
+   "ort": "Fellhornbahn Talstation, Oberstdorf",
+   "lat": 47.3736,
+   "lng": 10.2555,
+   "tal": 920,
+   "berg": 2030,
+   "fahrzeit_min": 80,
+   "region": "bayern",
+   "powder": 4,
+   "stau": [
+    "NW",
+    "N"
+   ],
+   "hang": "N",
+   "foehn": true,
+   "km": 83,
+   "lwd": "bayern"
+  },
+  {
+   "id": "zugspitze",
+   "name": "Zugspitze",
+   "ort": "Tiroler Zugspitzbahn Talstation, Ehrwald-Obermoos",
+   "lat": 47.4265,
+   "lng": 10.9428,
+   "tal": 1200,
+   "berg": 2700,
+   "fahrzeit_min": 45,
+   "region": "tirol",
+   "powder": 4,
+   "stau": [
+    "NW",
+    "N"
+   ],
+   "hang": "N",
+   "foehn": true,
+   "km": 41,
+   "lwd": "bayern",
+   "gletscher": true
+  },
+  {
+   "id": "lermoos",
+   "name": "Lermoos Grubigstein",
+   "ort": "Lermoos, Tirol",
+   "lat": 47.401,
+   "lng": 10.874,
+   "tal": 1000,
+   "berg": 2100,
+   "fahrzeit_min": 30,
+   "region": "tirol",
+   "powder": 3,
+   "stau": [
+    "NW",
+    "N"
+   ],
+   "hang": "N",
+   "foehn": true,
+   "km": 35,
+   "lwd": "tirol"
+  },
+  {
+   "id": "garmisch",
+   "name": "Garmisch-Classic",
+   "ort": "Garmisch-Partenkirchen",
+   "lat": 47.47,
+   "lng": 11.05,
+   "tal": 750,
+   "berg": 2050,
+   "fahrzeit_min": 55,
+   "region": "bayern",
+   "powder": 3,
+   "stau": [
+    "NW",
+    "N"
+   ],
+   "hang": "N",
+   "foehn": true,
+   "km": 56,
+   "lwd": "bayern"
+  },
+  {
+   "id": "tannheim",
+   "name": "Tannheimer Tal (Füssener Jöchle)",
+   "ort": "Grän, Tirol",
+   "lat": 47.503,
+   "lng": 10.556,
+   "tal": 1130,
+   "berg": 1820,
+   "fahrzeit_min": 35,
+   "region": "tirol",
+   "powder": 3,
+   "stau": [
+    "NW",
+    "N"
+   ],
+   "hang": "N",
+   "foehn": true,
+   "km": 26,
+   "lwd": "tirol"
+  },
+  {
+   "id": "oberjoch",
+   "name": "Oberjoch (Iseler)",
+   "ort": "Bad Hindelang",
+   "lat": 47.51,
+   "lng": 10.43,
+   "tal": 1150,
+   "berg": 1560,
+   "fahrzeit_min": 50,
+   "region": "bayern",
+   "powder": 3,
+   "stau": [
+    "NW",
+    "N"
+   ],
+   "hang": "N",
+   "foehn": true,
+   "km": 47,
+   "lwd": "bayern"
+  },
+  {
+   "id": "hahnenkamm",
+   "name": "Reutte Hahnenkamm",
+   "ort": "Höfen, Tirol",
+   "lat": 47.477,
+   "lng": 10.68,
+   "tal": 850,
+   "berg": 1860,
+   "fahrzeit_min": 25,
+   "region": "tirol",
+   "powder": 2,
+   "stau": [
+    "NW",
+    "N"
+   ],
+   "hang": "N",
+   "foehn": true,
+   "km": 19,
+   "lwd": "tirol"
+  },
+  {
+   "id": "nesselwang",
+   "name": "Nesselwang Alpspitz",
+   "ort": "Nesselwang, Allgäu",
+   "lat": 47.618,
+   "lng": 10.505,
+   "tal": 870,
+   "berg": 1500,
+   "fahrzeit_min": 20,
+   "region": "bayern",
+   "powder": 2,
+   "stau": [
+    "NW",
+    "N"
+   ],
+   "hang": "N",
+   "foehn": true,
+   "km": 24,
+   "lwd": "bayern"
+  },
+  {
+   "id": "ofterschwang",
+   "name": "Ofterschwang-Gunzesried",
+   "ort": "Ofterschwang, Allgäu",
+   "lat": 47.49,
+   "lng": 10.23,
+   "tal": 900,
+   "berg": 1400,
+   "fahrzeit_min": 55,
+   "region": "bayern",
+   "powder": 2,
+   "stau": [
+    "NW",
+    "N"
+   ],
+   "hang": "N",
+   "foehn": true,
+   "km": 67,
+   "lwd": "bayern"
+  },
+  {
+   "id": "soelden",
+   "name": "Sölden (Ötztal, mit Gletschern)",
+   "ort": "Sölden, Tirol",
+   "lat": 46.9666,
+   "lng": 11.0073,
+   "tal": 1370,
+   "berg": 2800,
+   "fahrzeit_min": 110,
+   "region": "tirol",
+   "powder": null,
+   "stau": [
+    "NW",
+    "S",
+    "SW"
+   ],
+   "hang": "NW",
+   "foehn": false,
+   "km": 113,
+   "lwd": "tirol",
+   "gletscher": true
+  },
+  {
+   "id": "pitztal",
+   "name": "Pitztaler Gletscher",
+   "ort": "Pitztaler Gletscherbahn, Mittelberg (St. Leonhard im Pitztal)",
+   "lat": 46.9627,
+   "lng": 10.8723,
+   "tal": 1740,
+   "berg": 3000,
+   "fahrzeit_min": 108,
+   "region": "tirol",
+   "powder": null,
+   "stau": [
+    "NW",
+    "S",
+    "SW"
+   ],
+   "hang": "N",
+   "foehn": false,
+   "km": 104,
+   "lwd": "tirol",
+   "gletscher": true
+  },
+  {
+   "id": "kaunertal",
+   "name": "Kaunertaler Gletscher",
+   "ort": "Kaunertaler Gletscher, Parkplatz Weißsee (Kaunertal)",
+   "lat": 46.8713,
+   "lng": 10.7126,
+   "tal": 2750,
+   "berg": 3000,
+   "fahrzeit_min": 155,
+   "region": "tirol",
+   "powder": null,
+   "stau": [
+    "NW",
+    "S",
+    "SW"
+   ],
+   "hang": "N",
+   "foehn": false,
+   "km": 127,
+   "lwd": "tirol",
+   "gletscher": true
+  },
+  {
+   "id": "stubai",
+   "name": "Stubaier Gletscher",
+   "ort": "Stubaier Gletscher, Talstation Mutterberg (Neustift im Stubaital)",
+   "lat": 47.0118,
+   "lng": 11.1562,
+   "tal": 1750,
+   "berg": 2900,
+   "fahrzeit_min": 134,
+   "region": "tirol",
+   "powder": null,
+   "stau": [
+    "NW",
+    "S",
+    "SW"
+   ],
+   "hang": "N",
+   "foehn": false,
+   "km": 145,
+   "lwd": "tirol",
+   "gletscher": true
+  }
+ ],
+ "_lage": "stau = Windrichtungen mit Niederschlagsverstärkung (Nordwest-/Nordstau am Alpennordrand; Arlberg/Bregenzerwald eher W–NW); hang = Hauptausrichtung der Abfahrten; foehn = Südföhn ruiniert den Pulver (alle Gebiete am Alpennordrand). Einschätzung HUGINSON 16.09.2026, nach Saison prüfen. lwd = zuständiger Lawinenwarndienst (Link in regeln.json → lawinenberichte); Fellhorn-Kanzelwand liegt halb in Vorarlberg, Allgäuer Seite → Bayern. Gletscher (Sölden, Pitztal, Kaunertal, Stubai) liegen am/nahe Alpenhauptkamm: Stau aus NW UND aus S/SW (Südstau greift über), Südströmung bringt dort eher Schnee als Föhn → foehn = false; hang = Gletscherexposition meist N. gletscher = true → Spaltenhinweis in Alarm und App. Einschätzung HUGINSON 24.10.2026, nach Saison prüfen."
+}

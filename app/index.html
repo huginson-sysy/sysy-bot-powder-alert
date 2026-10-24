@@ -1,0 +1,630 @@
+<!doctype html>
+<!--
+╔══════════════════════════════════╗
+║      ᚺ  ᚢ  ᚷ  ᛁ  ᚾ  ᛋ  ᛟ  ᚾ      ║
+║         H  U  G  I  N  S  O  N    ║
+╚══════════════════════════════════╝
+Powder Alert v0.3 — App im Sturmbrecher-Reiter „Apps" (webview auf http://127.0.0.1:8014/), 2026-10-03.
+Liest /api/stand (data/stand.json + Schalter + Alarmzustand), schreibt nur über /api/schalter, /api/lauf, /api/aktion.
+-->
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Powder Alert</title>
+<style>
+  :root {
+    --bg: #1a1d22; --panel: #21252b; --card: #262b33; --line: #333a44; --field: #2c323b;
+    --ink: #e8eaed; --ink2: #aeb5bf; --muted: #7c8490;
+    --acc: #8DD2EC; --acc-d: #5DBEE4; --acc-ghost: rgba(141, 210, 236, .10);
+    --ok: #46a578; --warn: #d08a2f; --bad: #d9625b;
+    --disp: "Space Grotesk", -apple-system, BlinkMacSystemFont, sans-serif;
+    --ui: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", "SF Mono", Menlo, monospace;
+    --r: 10px;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--ui); }
+  body { padding: 16px 20px 40px; max-width: 1480px; margin: 0 auto; }
+  a { color: var(--acc); text-decoration: none; } a:hover { text-decoration: underline; }
+  button, select, input { font: inherit; color: var(--ink); background: var(--field); border: 1px solid var(--line);
+    border-radius: 8px; padding: 6px 10px; }
+  button { cursor: pointer; } button:hover:not(:disabled) { border-color: var(--acc-d); }
+  button:disabled { opacity: .5; cursor: default; }
+  button.prim { background: var(--acc); color: #0a1a22; border-color: var(--acc); font-weight: 600; }
+  button.prim:hover:not(:disabled) { background: var(--acc-d); }
+  button.klein { padding: 3px 8px; font-size: 12.5px; }
+  .muted { color: var(--muted); } .ink2 { color: var(--ink2); }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* Kopf */
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; margin-bottom: 10px; }
+  .marke { display: flex; align-items: baseline; gap: 10px; font: 600 21px var(--disp); letter-spacing: -.2px; }
+  .marke small { font: 12px var(--ui); color: var(--muted); }
+  .pille { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 99px; font-size: 12.5px;
+    font-weight: 600; border: 1px solid var(--line); background: var(--card); }
+  .pille i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; display: inline-block; }
+  .p-an { color: var(--ok); } .p-warn { color: var(--warn); } .p-aus { color: var(--muted); }
+  .regler { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-left: auto; }
+  .schalter { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-weight: 600; }
+  .schalter input { display: none; }
+  .schalter .bahn { width: 42px; height: 24px; border-radius: 99px; background: var(--field); border: 1px solid var(--line);
+    position: relative; transition: background .15s; }
+  .schalter .bahn::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--ink2); transition: left .15s, background .15s; }
+  .schalter input:checked + .bahn { background: var(--acc-d); border-color: var(--acc-d); }
+  .schalter input:checked + .bahn::after { left: 20px; background: #fff; }
+  .pause { display: inline-flex; align-items: center; gap: 4px; }
+  .pause input { width: 140px; padding: 5px 6px; }
+  .statuszeile { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--ink2); font-size: 12.5px; margin-bottom: 14px; }
+  .statuszeile b { color: var(--ink); font-weight: 600; }
+  .fehlerchip { color: var(--bad); }
+
+  /* Banner */
+  .banner { border: 1px solid var(--line); background: var(--panel); border-radius: var(--r); padding: 10px 14px; margin-bottom: 12px;
+    display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+  .banner.warn { border-color: rgba(208, 138, 47, .55); } .banner.bad { border-color: rgba(217, 98, 91, .6); }
+  .banner .t { flex: 1 1 320px; }
+  pre.log { flex: 1 1 100%; margin: 4px 0 0; max-height: 180px; overflow: auto; font: 12px/1.4 var(--mono); color: var(--ink2);
+    white-space: pre-wrap; }
+
+  /* Alarm-Karten */
+  .alarme { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .karte { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; }
+  .karte h3 { margin: 0 0 4px; font: 600 14.5px var(--ui); }
+  .karte .zeile { color: var(--ink2); font-size: 13px; }
+  .karte details { margin-top: 6px; } .karte summary { cursor: pointer; color: var(--acc); font-size: 12.5px; }
+  .karte pre { white-space: pre-wrap; font: 12px/1.45 var(--mono); color: var(--ink2); margin: 6px 0 0; }
+  .karte .knoepfe { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .ok { color: var(--ok); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+
+  /* Raster */
+  .raster { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 16px; align-items: start; }
+  @media (max-width: 1150px) { .raster { grid-template-columns: minmax(0, 1fr); } }
+  .flaeche { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; }
+  .flaeche > h2 { margin: 0 0 10px; font: 600 15px var(--disp); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .reiter { display: inline-flex; gap: 2px; background: var(--field); border-radius: 8px; padding: 2px; margin-left: auto; }
+  .reiter button { border: 0; background: transparent; padding: 4px 10px; font-size: 12.5px; color: var(--ink2); }
+  .reiter button.an { background: var(--card); color: var(--ink); box-shadow: 0 0 0 1px var(--line) inset; }
+  .tabelle { overflow-x: auto; }
+  table.matrix { border-collapse: separate; border-spacing: 2px; width: 100%; min-width: 560px; }
+  .matrix th { font: 600 12px var(--ui); color: var(--ink2); text-align: center; padding: 4px 2px 6px; }
+  .matrix th.links { text-align: left; }
+  .matrix th small { display: block; font-weight: 400; color: var(--muted); }
+  .matrix th.alarmtag small { color: var(--acc); }
+  .matrix td.gebiet { padding: 4px 8px 4px 0; white-space: nowrap; }
+  .matrix td.gebiet .n { font-weight: 600; } .matrix td.gebiet .m { font-size: 11.5px; color: var(--muted); }
+  .zelle { width: 100%; min-width: 92px; height: 50px; border: 0; border-radius: 6px; padding: 4px 6px; display: flex;
+    flex-direction: column; align-items: center; justify-content: center; position: relative; line-height: 1.15; }
+  .zelle .w { font: 600 16px var(--ui); font-variant-numeric: tabular-nums; }
+  .zelle .u { font-size: 11px; opacity: .85; font-variant-numeric: tabular-nums; }
+  .zelle .b { position: absolute; top: 3px; right: 4px; font-size: 10.5px; letter-spacing: 1px; }
+  .zelle.sel { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--acc); }
+  .zelle.leer { background: transparent; color: var(--muted); border: 1px dashed var(--line); }
+  .legende { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: var(--ink2); flex-wrap: wrap; }
+  .legende .skala { display: flex; height: 10px; border-radius: 3px; overflow: hidden; width: 180px; }
+  .legende .skala span { flex: 1; }
+
+  /* Detail */
+  .detail h2 small { font: 400 12.5px var(--ui); color: var(--muted); }
+  .held { display: flex; align-items: baseline; gap: 12px; margin: 2px 0 2px; }
+  .held .zahl { font: 600 52px/1 var(--ui); font-variant-numeric: proportional-nums; letter-spacing: -1px; }
+  .held .lab { font-weight: 600; } .unter { color: var(--ink2); font-size: 12.5px; margin-bottom: 10px; }
+  .abschnitt { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 10px; }
+  .abschnitt h4 { margin: 0 0 6px; font: 600 12px var(--ui); color: var(--ink2); text-transform: uppercase; letter-spacing: .6px; }
+  .balken { display: grid; grid-template-columns: 128px 1fr 44px; align-items: center; gap: 8px; margin: 4px 0; font-size: 12.5px; }
+  .balken .bahn { height: 10px; background: var(--card); border-radius: 0 4px 4px 0; }
+  .balken .fuell { height: 10px; border-radius: 0 4px 4px 0; min-width: 0; }
+  .balken .wert { text-align: right; font-variant-numeric: tabular-nums; }
+  .kv { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 14px; font-size: 13px; }
+  .kv span { color: var(--muted); }
+  table.modelle { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .modelle td, .modelle th { padding: 3px 4px; border-bottom: 1px solid var(--line); text-align: left; }
+  .modelle th { color: var(--ink2); font-weight: 600; } .modelle td.r, .modelle th.r { text-align: right; }
+  .links { display: flex; flex-wrap: wrap; gap: 6px; }
+  .links a { border: 1px solid var(--line); border-radius: 8px; padding: 4px 9px; font-size: 12.5px; background: var(--card); }
+  .huette { font-size: 12.5px; margin-top: 6px; } .huette b { font-weight: 600; }
+  .hinweis { font-size: 12px; color: var(--ink2); background: var(--card); border-radius: 8px; padding: 8px 10px; margin-top: 10px; }
+  svg text { font: 11px var(--ui); fill: var(--muted); }
+
+  /* Einstellungen */
+  details.einst { margin-top: 16px; }
+  details.einst > summary { cursor: pointer; font: 600 14px var(--disp); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+  .chip { border-radius: 99px; padding: 3px 10px; font-size: 12.5px; }
+  .chip.an { border-color: var(--acc-d); background: var(--acc-ghost); }
+  .regeln { color: var(--ink2); font-size: 12.5px; margin: 6px 0 0; padding-left: 18px; }
+  footer { margin-top: 22px; color: var(--muted); font-size: 12px; display: flex; flex-wrap: wrap; gap: 6px 16px; }
+  #tip { position: fixed; z-index: 9; pointer-events: none; background: #0f1215; border: 1px solid var(--line); border-radius: 8px;
+    padding: 7px 9px; font-size: 12px; line-height: 1.4; max-width: 280px; display: none; box-shadow: 0 6px 20px rgba(0,0,0,.4); }
+  #tip b { font-size: 13px; }
+  .leerstand { text-align: center; padding: 40px 10px; color: var(--ink2); }
+</style>
+</head>
+<body>
+<header>
+  <div class="marke">❄ Powder Alert <small id="version"></small></div>
+  <span id="pille" class="pille p-aus"><i></i><span>…</span></span>
+  <div class="regler">
+    <label class="schalter" title="Hauptschalter: aus = keine automatischen Läufe, nichts geht raus">
+      <input type="checkbox" id="haupt"><span class="bahn"></span><span>Alarm</span></label>
+    <select id="versand" title="Wohin der Alarm geht">
+      <option value="gruppe">an die Gruppe</option><option value="nur_ich">nur an mich 🤖</option>
+      <option value="stumm">stumm (rechnet, sendet nicht)</option></select>
+    <span class="pause" title="Bis einschließlich diesem Tag wird nichts gesendet">Pause bis
+      <input type="date" id="pause"><button class="klein" id="pauseWeg" title="Pause aufheben">×</button></span>
+    <button class="prim" id="rechnen">Jetzt rechnen</button>
+  </div>
+</header>
+<div class="statuszeile" id="statuszeile"></div>
+<div id="banner"></div>
+<div class="alarme" id="alarme"></div>
+<div class="raster">
+  <section class="flaeche">
+    <h2>Powder-Radar <span class="muted" style="font:400 12.5px var(--ui)" id="radarUnter"></span>
+      <span class="reiter" id="reiter">
+        <button data-m="tief">Tiefschnee</button><button data-m="top">Top-Tag</button>
+        <button data-m="neu">Neuschnee</button><button data-m="sonne">Sonne</button></span></h2>
+    <div class="tabelle" id="matrix"></div>
+    <div class="legende" id="legende"></div>
+  </section>
+  <section class="flaeche detail" id="detail"></section>
+</div>
+<details class="einst" id="einst">
+  <summary>Einstellungen &amp; Regeln</summary>
+  <div class="flaeche" style="margin-top:10px">
+    <div><b>„Tour planen"</b> (Kalender, Route, Hütte über eine Sturmbrecher-Sitzung):
+      <label><input type="radio" name="sitzung" value="knopf"> nur per Knopf</label>
+      <label style="margin-left:10px"><input type="radio" name="sitzung" value="auto"> automatisch nach jedem Alarm</label></div>
+    <div style="margin-top:12px"><b>Skigebiete</b> <span class="muted">— ausgeschaltete werden nicht abgefragt, wirkt ab dem nächsten Lauf</span></div>
+    <div class="chips" id="gebieteChips"></div>
+    <ul class="regeln" id="regeln"></ul>
+  </div>
+</details>
+<footer>
+  <span>Wetterdaten: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a> (CC BY 4.0) · Ensembles ICON-EPS + ECMWF</span>
+  <span>Prognose, keine Garantie — und keine Aussage über Lawinengefahr.</span>
+  <span id="fussStand"></span>
+</footer>
+<div id="tip"></div>
+<script>
+'use strict';
+const $ = (s, el = document) => el.querySelector(s);
+const WT = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+const FAM_LAEUFE = { ICON: 40, ECMWF: 51 };
+let D = null, sel = { gebiet: null, ziel: null }, laufTimer = null, laufStart = null;
+let metrik = 'tief';
+try { metrik = localStorage.getItem('powder_metrik') || 'tief'; } catch (_) {}
+
+function h(tag, attrs, ...kinder) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === 'class') el.className = v; else if (k === 'style') el.style.cssText = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v); else el.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kinder.flat()) if (c != null && c !== false) el.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  return el;
+}
+function svg(tag, attrs, ...kinder) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const [k, v] of Object.entries(attrs || {})) if (v != null) el.setAttribute(k, v);
+  for (const c of kinder.flat()) if (c != null) el.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  return el;
+}
+const pz = (p) => p == null ? '–' : `${Math.round(p * 100)} %`;
+const cm = (x) => x == null ? '–' : `${Math.round(x)} cm`;
+const datum = (s) => new Date(s + 'T12:00:00');
+const tagText = (s) => { const d = datum(s); return `${WT[d.getDay()]} ${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.`; };
+const uhr = (iso) => iso ? iso.slice(11, 16) : '–';
+const tageBis = (a, b) => Math.round((datum(b) - datum(a)) / 864e5);
+const RICHT = ['N', 'NO', 'O', 'SO', 'S', 'SW', 'W', 'NW'];
+const richtung = (g) => g == null ? '–' : RICHT[Math.round(g / 45) % 8];
+const heuteISO = () => (D && D.jetzt ? D.jetzt.slice(0, 10) : new Date().toISOString().slice(0, 10));
+
+/* Sequenzielle Farbreihe (ein Ton, dunkel → hell, monoton in der Helligkeit): 0 = Fläche, 1 = Neuschnee-Weiß */
+const STUFEN = [[0, '#262b33'], [.1, '#24323f'], [.3, '#244c63'], [.5, '#246c8a'], [.7, '#3d93b6'], [.85, '#79c3e1'], [1, '#cdeefb']];
+function farbe(v) {
+  if (v == null) return null;
+  v = Math.max(0, Math.min(1, v));
+  for (let i = 1; i < STUFEN.length; i++) {
+    const [a, ca] = STUFEN[i - 1], [b, cb] = STUFEN[i];
+    if (v <= b) { const t = (v - a) / (b - a); return mische(ca, cb, t); }
+  }
+  return STUFEN[STUFEN.length - 1][1];
+}
+function mische(a, b, t) {
+  const x = (s) => [1, 3, 5].map((i) => parseInt(s.slice(i, i + 2), 16));
+  const [p, q] = [x(a), x(b)];
+  return '#' + p.map((v, i) => Math.round(v + (q[i] - v) * t).toString(16).padStart(2, '0')).join('');
+}
+function lum(hex) {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((c) => c <= .03928 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4);
+  return .2126 * r + .7152 * g + .0722 * b;
+}
+function tinte(hex) {   // Schrift in der Kachel: die Tinte mit dem höheren Kontrast (WCAG), nicht eine feste Helligkeitsgrenze
+  const L = lum(hex), hell = lum('#eef6fa'), dunkel = lum('#0a1a22');
+  return (L + .05) / (dunkel + .05) > (hell + .05) / (L + .05) ? '#0a1a22' : '#eef6fa';
+}
+
+/* ---------- Daten ---------- */
+async function laden() {
+  try {
+    const r = await fetch('/api/stand', { cache: 'no-store' });
+    D = await r.json();
+  } catch (e) { zeigeBanner('bad', 'Server nicht erreichbar (127.0.0.1:8014). launchd: com.sysy.powder-app'); return; }
+  render();
+}
+async function post(url, body) {
+  const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Powder': '1' }, body: JSON.stringify(body || {}) });
+  let j = {}; try { j = await r.json(); } catch (_) {}
+  return Object.assign({ ok: r.ok, status: r.status }, j);
+}
+function zeigeBanner(art, text, knoepfe, log) {
+  const b = $('#banner'); b.replaceChildren();
+  if (!text) return;
+  b.append(h('div', { class: `banner ${art || ''}` }, h('div', { class: 't' }, text), knoepfe || [], log ? h('pre', { class: 'log' }, log) : null,
+    h('button', { class: 'klein', onclick: () => b.replaceChildren(), title: 'schließen' }, '×')));
+}
+
+/* ---------- Ableitungen ---------- */
+function effektiv(s) {
+  if (!s.aktiv) return { k: 'p-aus', t: 'AUS' };
+  if (s.pause_bis && heuteISO() <= s.pause_bis) return { k: 'p-warn', t: `PAUSE bis ${tagText(s.pause_bis)}` };
+  if (s.versand === 'stumm') return { k: 'p-warn', t: 'STUMM — rechnet, sendet nicht' };
+  if (s.versand === 'nur_ich') return { k: 'p-an', t: 'AN — nur an mich' };
+  return { k: 'p-an', t: 'AN — an die Gruppe' };
+}
+function tage() { return D.stand ? Object.keys(D.stand.tage).sort() : []; }
+function alarmtag() { return D.stand ? tage()[(D.stand.regeln.vorlauf_tage || 2) - 1] : null; }
+function gebiet(ziel, id) { return D.stand && (D.stand.tage[ziel] || []).find((a) => a.id === id); }
+function reihenfolge() {   // Rangfolge des Alarmtags; Gebiete, die dort fehlen, hinten dran
+  const ids = [], at = alarmtag();
+  for (const z of [at, ...tage()]) for (const a of (D.stand.tage[z] || [])) if (!ids.includes(a.id)) ids.push(a.id);
+  return ids;
+}
+const METRIK = {
+  tief: { name: 'Tiefschnee-Chance', wert: (a) => a.p_tief, text: (a) => pz(a.p_tief), unter: (a) => cm(a.neu.p50) },
+  top: { name: 'Top-Tag-Chance', wert: (a) => a.p_top, text: (a) => pz(a.p_top), unter: (a) => cm(a.neu.p50) },
+  neu: { name: 'Neuschnee 48 h bis Skistart (Median)', wert: (a) => (a.neu.p50 || 0) / 40, text: (a) => cm(a.neu.p50),
+         unter: (a) => `${Math.round(a.neu.p10)}–${Math.round(a.neu.p90)}` },
+  sonne: { name: 'Sonnen-Chance (Wolken ≤ 30 %)', wert: (a) => a.faktoren.sonne, text: (a) => pz(a.faktoren.sonne),
+           unter: (a) => a.wetter.wolken == null ? '–' : `${Math.round(a.wetter.wolken)} % Wolken` },
+};
+function badges(a) {   // erklären, warum ein Schneetag kein Powder-Tag wird — ohne Schnee nur Rauschen
+  const out = [];
+  if ((a.trichter.tief || 0) < .1) return out;
+  if (a.ko.sturm >= .3) out.push(['💨', `Sturm in ${pz(a.ko.sturm)} der Läufe`]);
+  if (a.ko.regen >= .3) out.push(['🌧', `Regen am Skitag in ${pz(a.ko.regen)}`]);
+  if (a.ko.foehn >= .3) out.push(['F', `Föhn in ${pz(a.ko.foehn)}`]);
+  if (Math.max(a.ko.warm, a.ko.nass) >= .3) out.push(['🌡', `Erwärmung/Regen nach dem Schneefall in ${pz(Math.max(a.ko.warm, a.ko.nass))}`]);
+  return out.slice(0, 2);
+}
+
+/* ---------- Kopf ---------- */
+function renderKopf() {
+  const s = D.schalter, e = effektiv(s), p = $('#pille');
+  p.className = `pille ${e.k}`; p.lastChild.textContent = e.t;
+  $('#haupt').checked = !!s.aktiv;
+  $('#versand').value = s.versand || 'gruppe';
+  $('#pause').value = s.pause_bis || '';
+  $('#version').textContent = D.stand ? `v${D.stand.version}` : '';
+  const r = $('#rechnen'), l = D.lauf || {};
+  r.disabled = !!l.laeuft;
+  r.textContent = l.laeuft ? 'rechnet…' : 'Jetzt rechnen';
+  if (l.laeuft && !laufTimer) laufBeobachten();
+}
+function renderStatus() {
+  const z = $('#statuszeile'); z.replaceChildren();
+  const heute = heuteISO(), sa = D.saison || {};
+  if (!D.stand) { z.append(h('span', {}, 'Noch kein Lauf gespeichert.')); }
+  else {
+    const st = D.stand.status, modus = { normal: 'automatischer Lauf', nur_rechnen: 'nur gerechnet (App)' }[D.stand.modus] || D.stand.modus;
+    z.append(h('span', {}, 'Stand ', h('b', {}, `${tagText(D.stand.lauf.slice(0, 10))} ${uhr(D.stand.lauf)}`), ` · ${modus}`));
+    const fam = {};
+    for (const ana of Object.values(D.stand.tage)) for (const a of ana) for (const [f, n] of Object.entries(a.laeufe)) fam[f] = Math.max(fam[f] || 0, n);
+    z.append(h('span', {}, h('b', {}, `${st.ok}/${st.gebiete}`), ' Gebiete · ',
+      Object.entries(fam).map(([f, n]) => `${f} ${n}/${FAM_LAEUFE[f] || n}`).join(' · '), ' Läufe'));
+    const fehler = Object.entries(st.abruf || {}).filter(([, v]) => v.fehler && v.fehler.length);
+    if (fehler.length) z.append(h('span', { class: 'fehlerchip', title: fehler.map(([k, v]) => `${k}: ${v.fehler.join('; ')}`).join('\n') },
+      `⚠ Abruf-Fehler: ${fehler.map(([k]) => k).join(', ')}`));
+    const luecke = Object.entries(st.daten_ok_tage || {}).filter(([, ok]) => !ok).map(([t]) => tagText(t));
+    if (luecke.length) z.append(h('span', { class: 'fehlerchip', title: 'zu wenige Gebiete mit beiden Modellfamilien' }, `⚠ Datenlücke ${luecke.join(', ')} — dort keine Alarme`));
+    else if (!st.daten_ok) z.append(h('span', { class: 'fehlerchip' }, '⚠ Datenlücke — Alarme ausgesetzt'));
+  }
+  if (sa.start && heute < sa.start) z.append(h('span', {}, `Saison ab ${tagText(sa.start)} — in ${tageBis(heute, sa.start)} Tagen, dann täglich ${D.lauf_uhrzeit || '17:00'}`));
+  else if (sa.ende && heute > sa.ende) z.append(h('span', {}, `Saison vorbei (bis ${tagText(sa.ende)})`));
+  else z.append(h('span', {}, `Automatischer Lauf täglich ${D.lauf_uhrzeit || '17:00'}`));
+  $('#fussStand').textContent = D.stand ? `Lauf ${D.stand.lauf.replace('T', ' ')} · Version ${D.stand.version}` : '';
+}
+
+/* ---------- Alarme ---------- */
+function renderAlarme() {
+  const box = $('#alarme'); box.replaceChildren();
+  const heute = heuteISO(), zu = D.zustand || {}, vs = (D.stand && D.stand.alarm) || {};
+  const tageSet = [...new Set([...Object.keys(zu), ...Object.keys(vs)])].filter((d) => d >= heute).sort();
+  for (const d of tageSet) {
+    const z = zu[d] || {}, v = vs[d];
+    const vi = z.offen_info || z.stumm || {};
+    const titel = z.name ? `${z.name} · ${pz(z.p)}` : vi.name ? `${vi.name} · ${pz(vi.p)}` : v ? `${(gebiet(d, v.id) || {}).name || v.id}` : '';
+    const zeilen = [], knoepfe = [];
+    if (z.aktiv) zeilen.push(h('div', { class: 'zeile' }, h('span', { class: 'ok' }, '✓ Alarm steht'),
+      ` — gesendet ${uhr(z.gesendet)} ${z.modus === 'nur_ich' ? 'nur an mich' : 'an die Gruppe'}`,
+      z.zugestellt ? ' · in WhatsApp gespeichert' : z.zugestellt === false ? ' · nicht in der Bridge gefunden' : ''));
+    else if (z.art === 'absage') zeilen.push(h('div', { class: 'zeile' }, h('span', { class: 'muted' }, '○ abgesagt'), ` ${uhr(z.gesendet)}`));
+    if (z.aktiv && (z.empfaenger || []).length > 1) zeilen.push(h('div', { class: 'zeile muted' }, `Empfänger: ${z.empfaenger.map((m) => m === 'nur_ich' ? 'ich' : 'Gruppe').join(' + ')}`));
+    if (z.unterwegs) zeilen.push(h('div', { class: 'zeile warn' }, `⏳ Versand ${z.unterwegs.art} läuft gerade (${uhr(z.unterwegs.zeit)})`));
+    if (z.offen) {
+      zeilen.push(h('div', { class: 'zeile' }, h('span', { class: 'bad' }, `✗ ${z.offen} nicht rausgegangen`), z.fehler ? ` — ${z.fehler}` : ''));
+      knoepfe.push(h('button', { class: 'klein', onclick: () => aktion('nachsenden', d) }, 'Erneut senden'));
+    }
+    if (z.stumm) zeilen.push(h('div', { class: 'zeile' }, h('span', { class: 'warn' }, `◌ ${z.stumm.art} wäre gesendet`),
+      ` (${z.stumm.name}, ${pz(z.stumm.p)}) — Schalter: ${z.stumm.modus}, ${uhr(z.stumm.zeit)}`));
+    if (v && D.stand.modus !== 'normal') zeilen.push(h('div', { class: 'zeile' }, h('span', { class: 'warn' }, `Vorschau: ${v.art}`),
+      ` — ${v.grund}; geht erst mit dem automatischen Lauf raus`));
+    if (z.aktiv) knoepfe.push(h('button', { class: 'klein', onclick: () => absageFragen([{ ziel: d, name: z.name, p: z.p, modus: z.modus }]) }, 'Absage senden'));
+    // je Text ein eigener Aufklapper — der zuletzt gesendete darf die aktuelle Vorschau nicht verdecken (Astra 03.10.)
+    const texte = [];
+    if (v && v.text && D.stand.modus !== 'normal') texte.push(['Vorschau ansehen', v.text]);
+    if (z.stumm && z.stumm.text) texte.push(['Nicht gesendete Nachricht ansehen', z.stumm.text]);
+    if (z.text) texte.push([z.offen ? 'Fehlgeschlagene Nachricht ansehen' : 'Gesendete Nachricht ansehen', z.text]);
+    box.append(h('div', { class: 'karte' },
+      h('h3', {}, `${tagText(d)} `, h('span', { class: 'muted', style: 'font-weight:400' }, titel)), zeilen,
+      texte.map(([l, t]) => h('details', {}, h('summary', {}, l), h('pre', {}, t))),
+      knoepfe.length ? h('div', { class: 'knoepfe' }, knoepfe) : null));
+  }
+  if (!tageSet.length) {
+    const r = D.stand ? D.stand.regeln : { alarm_ab_wahrscheinlichkeit: .7 };
+    box.append(h('div', { class: 'karte' }, h('h3', {}, 'Kein Alarm'), h('div', { class: 'zeile' },
+      `Alarm ab ${pz(r.alarm_ab_wahrscheinlichkeit)} Tiefschnee-Chance für übermorgen (spätestens morgen).`)));
+  }
+}
+
+/* ---------- Matrix ---------- */
+function renderMatrix() {
+  for (const b of $('#reiter').children) b.classList.toggle('an', b.dataset.m === metrik);
+  const box = $('#matrix'); box.replaceChildren();
+  if (!D.stand) {
+    box.append(h('div', { class: 'leerstand' }, 'Noch keine Prognose. ', h('button', { class: 'prim', onclick: rechnen }, 'Jetzt rechnen')));
+    $('#legende').replaceChildren(); $('#radarUnter').textContent = ''; return;
+  }
+  const M = METRIK[metrik], ts = tage(), at = alarmtag(), heute = D.stand.heute;
+  $('#radarUnter').textContent = M.name;
+  const kopf = h('tr', {}, h('th', { class: 'links' }, 'Gebiet', h('small', {}, `ab ${D.stand.start}`)),
+    ts.map((z) => { const n = tageBis(heute, z); return h('th', { class: z === at ? 'alarmtag' : '' }, tagText(z),
+      h('small', {}, z === at ? 'Alarmtag' : n === 1 ? 'morgen' : `in ${n} Tagen`)); }));
+  const zeilen = reihenfolge().map((id) => {
+    const erst = ts.map((z) => gebiet(z, id)).find(Boolean);
+    return h('tr', {}, h('td', { class: 'gebiet' }, h('div', { class: 'n' }, erst.name),
+      h('div', { class: 'm' }, `${erst.fahrzeit_min}′ · ${erst.berg} m · ${({ bayern: 'BY', tirol: 'T', vorarlberg: 'V' })[erst.lwd] || ''}${erst.gletscher ? ' · Gletscher' : ''}`)),
+      ts.map((z) => {
+        const a = gebiet(z, id);
+        if (!a) return h('td', {}, h('div', { class: 'zelle leer' }, '–'));
+        const f = farbe(M.wert(a)), bd = (metrik === 'tief' || metrik === 'top') ? badges(a) : [];
+        const istSel = sel.gebiet === id && sel.ziel === z;
+        const btn = h('button', { class: `zelle${istSel ? ' sel' : ''}`, style: `background:${f};color:${tinte(f)}`,
+          'aria-label': `${a.name} ${tagText(z)}: ${M.name} ${M.text(a)}`,
+          onclick: () => { sel = { gebiet: id, ziel: z }; renderMatrix(); renderDetail(); },
+          onmouseenter: (ev) => tipp(ev, a, z), onmousemove: tippBewegen, onmouseleave: tippWeg },
+          h('span', { class: 'w' }, M.text(a)), h('span', { class: 'u' }, M.unter(a)),
+          bd.length ? h('span', { class: 'b' }, bd.map((b) => b[0]).join('')) : null);
+        return h('td', {}, btn);
+      }));
+  });
+  const aus = (D.schalter.gebiete_aus || []).map((id) => (D.gebiete_alle.find((g) => g.id === id) || { name: id }).name);
+  box.append(h('table', { class: 'matrix' }, h('thead', {}, kopf), h('tbody', {}, zeilen)));
+  if (aus.length) box.append(h('div', { class: 'muted', style: 'font-size:12px;margin-top:6px' }, `ausgeschaltet: ${aus.join(', ')}`));
+  const lg = $('#legende'); lg.replaceChildren();
+  const skala = h('div', { class: 'skala' }, [0, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1].map((v) => h('span', { style: `background:${farbe(v)}` })));
+  lg.append(metrik === 'neu' ? '0 cm' : '0 %', skala, metrik === 'neu' ? '≥ 40 cm' : '100 %');
+  if (metrik === 'tief') lg.append(h('span', { class: 'muted' }, `· Alarm ab ${pz(D.stand.regeln.alarm_ab_wahrscheinlichkeit)} · 💨 Sturm · 🌧 Regen · F Föhn · 🌡 Erwärmung (je ≥ 30 % der Läufe)`));
+}
+function tipp(ev, a, z) {
+  const t = $('#tip'); t.replaceChildren(
+    h('b', {}, pz(a.p_tief)), ' Tiefschnee-Chance', h('br'),
+    `${a.name} · ${tagText(z)}`, h('br'),
+    `Neuschnee ${cm(a.neu.p50)} (${Math.round(a.neu.p10)}–${Math.round(a.neu.p90)}) · Top-Tag ${pz(a.p_top)}`, h('br'),
+    Object.entries(a.p_fam).map(([f, v]) => `${f} ${pz(v)}`).join(' · '),
+    badges(a).length ? [h('br'), badges(a).map((b) => b[1]).join(' · ')] : null);
+  t.style.display = 'block'; tippBewegen(ev);
+}
+function tippBewegen(ev) {
+  const t = $('#tip'), w = t.offsetWidth, hh = t.offsetHeight;
+  let x = ev.clientX + 14, y = ev.clientY + 14;
+  if (x + w > innerWidth - 8) x = ev.clientX - w - 14;
+  if (y + hh > innerHeight - 8) y = ev.clientY - hh - 14;
+  t.style.left = `${x}px`; t.style.top = `${y}px`;
+}
+function tippWeg() { $('#tip').style.display = 'none'; }
+
+/* ---------- Detail ---------- */
+function balken(label, wert, farbeFuell, titel) {
+  return h('div', { class: 'balken', title: titel || null }, h('span', {}, label),
+    h('div', { class: 'bahn' }, h('div', { class: 'fuell', style: `width:${Math.round((wert || 0) * 100)}%;background:${farbeFuell}` })),
+    h('span', { class: 'wert' }, pz(wert)));
+}
+function kurve(a) {   // Überschreitungskurve P(Neuschnee ≥ x)
+  const W = 360, H = 150, L = 44, R = 10, T = 10, B = 24, pts = a.neu.kurve, xmax = 60;
+  const X = (x) => L + (x / xmax) * (W - L - R), Y = (p) => T + (1 - p) * (H - T - B);
+  const s = svg('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img', 'aria-label': 'Chance für mindestens x cm Neuschnee' });
+  for (const p of [0, .5, 1]) {
+    s.append(svg('line', { x1: L, x2: W - R, y1: Y(p), y2: Y(p), stroke: '#333a44', 'stroke-width': 1 }));
+    s.append(svg('text', { x: L - 6, y: Y(p) + 4, 'text-anchor': 'end' }, `${p * 100} %`));
+  }
+  for (const x of [0, 10, 20, 30, 40, 50, 60]) s.append(svg('text', { x: X(x), y: H - 6, 'text-anchor': x === 60 ? 'end' : 'middle' }, x === 60 ? '60 cm' : `${x}`));
+  const schw = D.stand.regeln.tiefschnee_ab_cm;
+  s.append(svg('line', { x1: X(schw), x2: X(schw), y1: T, y2: H - B, stroke: '#4a5361', 'stroke-width': 1 }));
+  const linie = pts.map(([x, p], i) => `${i ? 'L' : 'M'}${X(x).toFixed(1)},${Y(p).toFixed(1)}`).join(' ');
+  s.append(svg('path', { d: `${linie} L${X(xmax)},${Y(0)} L${X(0)},${Y(0)} Z`, fill: 'rgba(141,210,236,.10)' }));
+  s.append(svg('path', { d: linie, fill: 'none', stroke: '#8DD2EC', 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+  const ps = (pts.find(([x]) => x === schw) || [schw, a.trichter.tief])[1];
+  s.append(svg('circle', { cx: X(schw), cy: Y(ps), r: 4.5, fill: '#8DD2EC', stroke: '#21252b', 'stroke-width': 2 }));
+  s.append(svg('text', { x: X(schw) + 9, y: Y(ps) < T + 26 ? Y(ps) + 17 : Y(ps) - 8, style: 'fill:#e8eaed' }, `≥ ${schw} cm: ${pz(ps)}`));
+  // Fadenkreuz: rastet auf die 5-cm-Stufen ein
+  const faden = svg('line', { y1: T, y2: H - B, stroke: '#aeb5bf', 'stroke-width': 1, visibility: 'hidden' });
+  const punkt = svg('circle', { r: 4, fill: '#8DD2EC', stroke: '#21252b', 'stroke-width': 2, visibility: 'hidden' });
+  const fl = svg('rect', { x: L, y: T, width: W - L - R, height: H - T - B, fill: 'transparent' });
+  fl.addEventListener('mousemove', (ev) => {
+    const r = s.getBoundingClientRect(), x = ((ev.clientX - r.left) / r.width) * W;
+    const xc = Math.max(0, Math.min(xmax, Math.round(((x - L) / (W - L - R)) * xmax / 5) * 5));
+    const p = (pts.find(([q]) => q === xc) || [xc, 0])[1];
+    faden.setAttribute('x1', X(xc)); faden.setAttribute('x2', X(xc)); faden.setAttribute('visibility', 'visible');
+    punkt.setAttribute('cx', X(xc)); punkt.setAttribute('cy', Y(p)); punkt.setAttribute('visibility', 'visible');
+    const t = $('#tip'); t.replaceChildren(h('b', {}, pz(p)), ` Chance für ≥ ${xc} cm`); t.style.display = 'block'; tippBewegen(ev);
+  });
+  fl.addEventListener('mouseleave', () => { faden.setAttribute('visibility', 'hidden'); punkt.setAttribute('visibility', 'hidden'); tippWeg(); });
+  s.append(faden, punkt, fl);
+  return s;
+}
+function trendBild(a) {
+  const werte = [...(a.trend || []).map(([l, p]) => [l, p]), [D.stand.lauf, a.p_tief]];
+  if (werte.length < 2) return h('div', { class: 'muted', style: 'font-size:12.5px' }, 'Erster Lauf für diesen Tag — Verlauf ab dem nächsten Lauf.');
+  const W = 200, H = 40, P = 5, n = werte.length;
+  const X = (i) => P + (i / (n - 1)) * (W - 2 * P), Y = (p) => P + (1 - p) * (H - 2 * P);
+  const s = svg('svg', { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: 'img', 'aria-label': 'Verlauf der Chance über die Läufe' });
+  s.append(svg('path', { d: werte.map(([, p], i) => `${i ? 'L' : 'M'}${X(i)},${Y(p)}`).join(' '), fill: 'none', stroke: '#7c8490', 'stroke-width': 2 }));
+  s.append(svg('circle', { cx: X(n - 1), cy: Y(werte[n - 1][1]), r: 4, fill: '#8DD2EC', stroke: '#21252b', 'stroke-width': 2 }));
+  return h('div', { style: 'display:flex;align-items:center;gap:10px;font-size:12.5px' }, s,
+    h('span', { class: 'ink2 num' }, werte.map(([, p]) => Math.round(p * 100)).join(' → ') + ' %'));
+}
+function pfeil(gradVon) {   // Windpfeil: zeigt, wohin der Wind weht
+  if (gradVon == null) return '';
+  return svg('svg', { width: 14, height: 14, viewBox: '-7 -7 14 14', style: 'vertical-align:-2px' },
+    svg('path', { d: 'M0,-5 L3.5,3 L0,1.2 L-3.5,3 Z', fill: '#aeb5bf', transform: `rotate(${(gradVon + 180) % 360})` }));
+}
+function renderDetail() {
+  const box = $('#detail'); box.replaceChildren();
+  if (!D.stand) { box.append(h('div', { class: 'leerstand' }, 'Details erscheinen nach dem ersten Lauf.')); return; }
+  let a = sel.gebiet && gebiet(sel.ziel, sel.gebiet);
+  if (!a) { const at = alarmtag(); a = (D.stand.tage[at] || [])[0]; sel = { gebiet: a && a.id, ziel: at }; }
+  if (!a) { box.append(h('div', { class: 'leerstand' }, 'Keine Daten.')); return; }
+  const z = sel.ziel, R = D.stand.regeln, n = tageBis(D.stand.heute, z), w = a.wetter;
+  box.append(h('h2', {}, a.name, h('small', {}, `${tagText(z)} · ${z === alarmtag() ? 'Alarmtag' : n === 1 ? 'morgen' : `in ${n} Tagen`} · ${a.tal}–${a.berg} m`)));
+  box.append(h('div', { class: 'held' }, h('span', { class: 'zahl' }, pz(a.p_tief)), h('span', { class: 'lab' }, 'Tiefschnee-Chance')));
+  box.append(h('div', { class: 'unter' }, `≥ ${R.tiefschnee_ab_cm} cm in den 48 h bis ${R.skistart_uhr} Uhr · trocken geblieben · fahrbar. `,
+    a.p_tief >= R.alarm_ab_wahrscheinlichkeit ? h('span', { class: 'ok' }, `✓ über der Alarmschwelle ${pz(R.alarm_ab_wahrscheinlichkeit)}`) :
+      h('span', { class: 'muted' }, `Alarmschwelle ${pz(R.alarm_ab_wahrscheinlichkeit)}`)));
+  box.append(h('div', { class: 'abschnitt' }, h('h4', {}, 'Modellfamilien (je 50 %)'),
+    Object.entries(a.p_fam).map(([f, v]) => balken(`${f} · ${a.laeufe[f]} Läufe`, v, '#8DD2EC'))));
+  box.append(h('div', { class: 'abschnitt' }, h('h4', {}, 'Wie die Chance zustande kommt'),
+    balken(`≥ ${R.tiefschnee_ab_cm} cm Neuschnee`, a.trichter.tief, '#a9dff2'),
+    balken('… trocken geblieben', a.trichter.trocken, '#6cc3e6', 'kein Regen, keine Erwärmung ≥ 2 °C nach dem Schneefall'),
+    balken('… und fahrbar', a.trichter.fahrbar, '#3d93b6', 'kein Sturm ≥ 60 km/h, kein Regen am Skitag, kein Föhn'),
+    h('div', { class: 'muted', style: 'font-size:12px;margin-top:4px' }, `Top-Tag (Pulver + kalt + Sonne + wenig Wind, ≥ ${R.alarm_ab_punkte} Punkte): ${pz(a.p_top)}`)));
+  box.append(h('div', { class: 'abschnitt' }, h('h4', {}, 'Neuschnee 48 h bis Skistart'),
+    h('div', { style: 'font-size:13px;margin-bottom:4px' }, h('b', {}, cm(a.neu.p50)), ' Median · ',
+      h('span', { class: 'ink2' }, `10 % der Läufe unter ${cm(a.neu.p10)}, 10 % über ${cm(a.neu.p90)}`)), kurve(a)));
+  box.append(h('div', { class: 'abschnitt' }, h('h4', {}, 'Faktoren — Anteil der Läufe'),
+    balken('kalt (≤ 0 °C)', a.faktoren.kalt, '#8DD2EC'), balken('wenig Wind', a.faktoren.wind_ok, '#8DD2EC'),
+    balken('Sonne', a.faktoren.sonne, '#8DD2EC'), balken('Staulage', a.faktoren.stau, '#8DD2EC', 'Schneefall aus der Stau-Richtung des Gebiets'),
+    balken('⚠ Sturm', a.ko.sturm, '#d08a2f'), balken('⚠ Regen am Skitag', a.ko.regen, '#d08a2f'),
+    balken('⚠ Föhn', a.ko.foehn, '#d08a2f'), balken('⚠ Erwärmung danach', Math.max(a.ko.warm, a.ko.nass), '#d08a2f')));
+  box.append(h('div', { class: 'abschnitt' }, h('h4', {}, `Skitag ${R.skistart_uhr}–${R.skitag_bis_uhr} Uhr (Median)`),
+    h('div', { class: 'kv' },
+      h('div', {}, h('span', {}, 'Temperatur '), w.tmax == null ? '–' : `${Math.round(w.tmax)} °C`),
+      h('div', {}, h('span', {}, 'Wind '), w.wind == null ? '–' : `${Math.round(w.wind)} km/h aus ${richtung(w.wd)} `, pfeil(w.wd)),
+      h('div', {}, h('span', {}, 'Wolken '), w.wolken == null ? '–' : `${Math.round(w.wolken)} %`),
+      h('div', {}, h('span', {}, 'Schneefall aus '), richtung(a.wd_schnee), ' ', pfeil(a.wd_schnee)))));
+  const det = Object.entries(a.det);
+  box.append(h('div', { class: 'abschnitt' }, h('h4', {}, 'Einzelmodelle'),
+    h('table', { class: 'modelle' }, h('tr', {}, h('th', {}, 'Modell'), h('th', { class: 'r' }, 'Neuschnee'), h('th', { class: 'r' }, 'Tiefschnee-Tag'), h('th', { class: 'r' }, 'Punkte')),
+      det.map(([m, d]) => h('tr', {}, h('td', {}, m), d ? [h('td', { class: 'r num' }, `${d.neu} cm`),
+        h('td', { class: 'r' }, d.tiefschnee ? h('span', { class: 'ok' }, '✓ ja') : h('span', { class: 'muted' }, '✗ nein')),
+        h('td', { class: 'r num' }, d.punkte)] : h('td', { colspan: 3, class: 'muted r' }, 'keine Daten'))))));
+  box.append(h('div', { class: 'abschnitt' }, h('h4', {}, 'Verlauf über die Läufe'), trendBild(a)));
+  const hu = a.huetten || [];
+  box.append(h('div', { class: 'abschnitt' }, h('h4', {}, `Anfahrt ≈ ${a.fahrzeit_min} min ab ${D.stand.start}`),
+    h('div', { class: 'links' }, h('a', { href: a.links.google, target: '_blank', rel: 'noopener' }, 'Route Google Maps'),
+      h('a', { href: a.links.apple, target: '_blank', rel: 'noopener' }, 'Route Apple Karten'),
+      a.links.lawine ? h('a', { href: a.links.lawine, target: '_blank', rel: 'noopener' }, 'Lawinenbericht') : null),
+    hu.length ? hu.map((x) => h('div', { class: 'huette' }, '🍲 ', h('b', {}, x.name), x.lage ? h('span', { class: 'muted' }, ` — ${x.lage}`) : '',
+      h('br'), x.telefon ? `☎ ${x.telefon}  ` : '', x.mail ? `✉ ${x.mail}  ` : '',
+      x.url ? h('a', { href: x.url, target: '_blank', rel: 'noopener' }, 'Webseite') : '')) :
+      h('div', { class: 'huette muted' }, 'Noch keine Hütte hinterlegt (config/huetten.json).'),
+    h('div', { class: 'knoepfe', style: 'margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap' },
+      h('button', { class: 'prim', onclick: () => tourPlanen(a, z) }, 'Tour planen'),
+      h('span', { class: 'muted', style: 'font-size:12px' }, 'öffnet eine Sturmbrecher-Sitzung: Termine, Kalender, Route, Hütte'))));
+  box.append(h('div', { class: 'hinweis' }, 'Tiefschnee-Chance sagt nichts über Lawinengefahr — auch bei niedriger Stufe sind gefährliche Stellen möglich. Vor jeder Fahrt abseits der Piste den Lagebericht lesen.',
+    a.gletscher ? ' Gletscher: abseits der markierten Pisten Spaltengefahr — Spalten sind besonders früh in der Saison nur dünn überdeckt.' : ''));
+}
+
+/* ---------- Einstellungen ---------- */
+function renderEinst() {
+  const s = D.schalter;
+  for (const r of document.querySelectorAll('input[name=sitzung]')) r.checked = r.value === (s.sitzung || 'knopf');
+  const chips = $('#gebieteChips'); chips.replaceChildren();
+  const aus = new Set(s.gebiete_aus || []);
+  for (const g of D.gebiete_alle || []) chips.append(h('button', { class: `chip${aus.has(g.id) ? '' : ' an'}`, title: aus.has(g.id) ? 'aus — klicken zum Einschalten' : 'an — klicken zum Ausschalten',
+    onclick: async () => { aus.has(g.id) ? aus.delete(g.id) : aus.add(g.id); await schalterSetzen({ gebiete_aus: [...aus] }); } }, `${aus.has(g.id) ? '○' : '●'} ${g.name}`));
+  const R = (D.stand && D.stand.regeln) || {};
+  const ul = $('#regeln'); ul.replaceChildren(...[
+    `Alarm ab ${pz(R.alarm_ab_wahrscheinlichkeit)} Tiefschnee-Chance für übermorgen; springt ein Tag erst später über die Schwelle, kommt der Alarm verspätet für morgen.`,
+    `Update bei ±20 Prozentpunkten oder Gebietswechsel, Absage unter ${pz(R.absage_unter_wahrscheinlichkeit)} — für jeden noch kommenden alarmierten Tag. Eine Absage geht immer dorthin, wo der Alarm hinging.`,
+    `Tiefschnee = ≥ ${R.tiefschnee_ab_cm} cm in den 48 h bis ${R.skistart_uhr} Uhr am Skitag, danach kein Regen und keine Erwärmung ≥ 2 °C, am Skitag kein Sturm ≥ 60 km/h, kein Regen, kein Föhn.`,
+    'Chance = Anteil der Ensemble-Läufe; ICON-EPS (40) und ECMWF (51) zählen je 50 %. Einzelmodelle nur zur Kontrolle.',
+    'Höhenkorrektur: Schneeanteil aus der Temperatur auf Bergstationshöhe (≤ 0 °C ganz Schnee, ≥ 2 °C Regen) — Open-Meteo liefert Schnee sonst aus der tieferen Modellhöhe.',
+    'Schalter-Rangfolge: Alarm aus > Pause > Versandart. Ein laufender Abruf liest den Schalter direkt vor dem Senden noch einmal.',
+  ].map((t) => h('li', {}, t)));
+}
+
+/* ---------- Aktionen ---------- */
+async function schalterSetzen(teil) {
+  const r = await post('/api/schalter', teil);
+  if (!r.ok) { zeigeBanner('bad', `Schalter nicht gespeichert: ${r.fehler || r.status}`); await laden(); return; }
+  D.schalter = r.schalter; render();
+  if (r.aktive_alarme && r.aktive_alarme.length) absageFragen(r.aktive_alarme);
+}
+function absageFragen(liste) {
+  const text = `Es steht noch ein Alarm (${liste.map((a) => `${tagText(a.ziel)} ${a.name} ${pz(a.p)}`).join(', ')}). Die Freunde glauben sonst, er gilt weiter.`;
+  zeigeBanner('warn', text, [
+    ...liste.map((a) => h('button', { class: 'prim klein', onclick: () => aktion('absage', a.ziel) }, `Absage für ${tagText(a.ziel)} senden`)),
+    h('button', { class: 'klein', onclick: () => zeigeBanner() }, 'Alarm stehen lassen')]);
+}
+async function aktion(art, ziel, gebietId) {
+  zeigeBanner('', `${art === 'tour' ? 'Tour wird angefragt' : art === 'absage' ? 'Absage wird gesendet' : 'Wird erneut gesendet'} …`);
+  const r = await post('/api/aktion', { art, ziel, gebiet: gebietId });
+  const ok = r.ok && r.rc === 0;
+  zeigeBanner(ok ? '' : 'bad', ok ? ({ tour: '✓ Sturmbrecher-Sitzung angefragt (/powder-tag).', absage: '✓ Absage gesendet.', nachsenden: '✓ Erneut gesendet.' })[art]
+    : `✗ Hat nicht geklappt (${r.rc === 3 ? 'es läuft gerade ein Lauf' : r.fehler || `Code ${r.rc}`}).`, null, r.ausgabe ? r.ausgabe.trim().split('\n').slice(-12).join('\n') : null);
+  await laden();
+}
+function tourPlanen(a, z) { aktion('tour', z, a.id); }
+async function rechnen() {
+  const r = await post('/api/lauf');
+  if (r.status === 409) zeigeBanner('warn', 'Es läuft schon eine Berechnung.');
+  else if (!r.ok) { zeigeBanner('bad', `Start fehlgeschlagen: ${r.fehler || r.status}`); return; }
+  laufStart = Date.now(); laufBeobachten(); $('#rechnen').disabled = true;
+}
+function laufBeobachten() {
+  clearInterval(laufTimer);
+  laufTimer = setInterval(async () => {
+    let l; try { l = await (await fetch('/api/lauf', { cache: 'no-store' })).json(); } catch (_) { return; }
+    const s = laufStart ? Math.round((Date.now() - laufStart) / 1000) : null;
+    $('#rechnen').textContent = l.laeuft ? `rechnet… ${s != null ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : ''}` : 'Jetzt rechnen';
+    if (!l.laeuft) {
+      clearInterval(laufTimer); laufTimer = null; laufStart = null;
+      if (l.rc === 0) zeigeBanner('', '✓ Neu gerechnet.');
+      else if (l.rc === 3) zeigeBanner('warn', 'Es lief gerade schon ein Lauf (z. B. der automatische) — Stand kommt von dort.');
+      else zeigeBanner('bad', `Berechnung fehlgeschlagen (Code ${l.rc}).`, null, (l.ausgabe || '').trim().split('\n').slice(-15).join('\n'));
+      await laden();
+    }
+  }, 2000);
+}
+
+/* ---------- Verdrahtung ---------- */
+function render() { renderKopf(); renderStatus(); renderAlarme(); renderMatrix(); renderDetail(); renderEinst(); }
+$('#haupt').addEventListener('change', (e) => schalterSetzen({ aktiv: e.target.checked }));
+$('#versand').addEventListener('change', (e) => schalterSetzen({ versand: e.target.value }));
+$('#pause').addEventListener('change', (e) => schalterSetzen({ pause_bis: e.target.value || null }));
+$('#pauseWeg').addEventListener('click', () => schalterSetzen({ pause_bis: null }));
+$('#rechnen').addEventListener('click', rechnen);
+for (const b of $('#reiter').children) b.addEventListener('click', () => { metrik = b.dataset.m; try { localStorage.setItem('powder_metrik', metrik); } catch (_) {} renderMatrix(); });
+for (const r of document.querySelectorAll('input[name=sitzung]')) r.addEventListener('change', () => schalterSetzen({ sitzung: r.value }));
+window.addEventListener('error', (e) => zeigeBanner('bad', `Fehler in der App: ${e.message}`));
+window.addEventListener('unhandledrejection', (e) => zeigeBanner('bad', `Fehler in der App: ${e.reason && e.reason.message || e.reason}`));
+laden();
+setInterval(() => { if (!laufTimer && document.visibilityState === 'visible') laden(); }, 60000);
+</script>
+</body>
+</html>
